@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 
-from sqlalchemy import ForeignKey
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import JSON, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import JSON
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
@@ -15,7 +13,7 @@ class Base(DeclarativeBase):
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class InferenceRequest(Base):
@@ -33,7 +31,9 @@ class InferenceRequest(Base):
 class InferenceResult(Base):
     __tablename__ = "inference_result"
 
-    request_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("inference_request.id", ondelete="CASCADE"), primary_key=True)
+    request_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("inference_request.id", ondelete="CASCADE"), primary_key=True
+    )
     labels: Mapped[list[str]] = mapped_column(JSON)
     scores: Mapped[list[float]] = mapped_column(JSON)
     top_label: Mapped[str]
@@ -44,7 +44,9 @@ class InferenceResult(Base):
 class InferenceError(Base):
     __tablename__ = "inference_error"
 
-    request_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("inference_request.id", ondelete="CASCADE"), primary_key=True)
+    request_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("inference_request.id", ondelete="CASCADE"), primary_key=True
+    )
     error_type: Mapped[str]
     message: Mapped[str]
     traceback: Mapped[str]

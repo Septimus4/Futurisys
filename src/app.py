@@ -1,49 +1,70 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 import uuid
-from typing import Any
+from collections.abc import AsyncGenerator, Awaitable, Callable
+from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Depends, Request, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from .settings import get_settings
-from .schemas import ClassifyRequest, ClassifyResponse, RequestRecord, StoredRequest, StoredResult, StoredError
-from .deps import get_db, verify_api_key
-from .service import classify_and_persist
-from .models import InferenceRequest, InferenceResult, InferenceError, Base
+from .deps import get_db, get_engine, verify_api_key
 from .hf import get_pipeline
-from .deps import get_engine
-
-from contextlib import asynccontextmanager
+from .models import Base, InferenceError, InferenceRequest, InferenceResult
+from .schemas import (
+    ClassifyRequest,
+    ClassifyResponse,
+    RequestRecord,
+    StoredError,
+    StoredRequest,
+    StoredResult,
+)
+from .service import classify_and_persist
+from .settings import get_settings
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):  # pragma: no cover - side effects
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # pragma: no cover - side effects
+    settings = get_settings()
+    logging.basicConfig(
+        level=getattr(logging, settings.log_level.upper(), logging.INFO),
+        format='%(message)s',  # emit pure JSON strings already encoded below
+    )
+    logger = logging.getLogger(__name__)
     get_pipeline()
     engine = get_engine()
     Base.metadata.create_all(bind=engine)
-    yield
+    logger.info(json.dumps({"event": "startup"}))
+    try:
+        yield
+    finally:
+        logger.info(json.dumps({"event": "shutdown"}))
 
 
-app = FastAPI(title="Zero-Shot Classification API", version=get_settings().app_version, lifespan=lifespan)
+app = FastAPI(
+    title="Zero-Shot Classification API",
+    version=get_settings().app_version,
+    lifespan=lifespan,
+)
 
 
 @app.middleware("http")
-async def add_timing_and_request_id(request: Request, call_next):  # type: ignore[override]
+async def add_timing_and_request_id(
+    request: Request, call_next: Callable[[Request], Awaitable[JSONResponse]]
+) -> JSONResponse:  # middleware signature
     rid = uuid.uuid4()
     request.state.request_id = rid
     start = time.perf_counter()
     try:
         response = await call_next(request)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         elapsed = int((time.perf_counter() - start) * 1000)
         body = {"request_id": str(rid), "error": "internal server error"}
         response = JSONResponse(status_code=500, content=body)
-        print(json.dumps({
-            "level": "error",
+        logging.getLogger("request").error(json.dumps({
             "request_id": str(rid),
             "path": request.url.path,
             "method": request.method,
@@ -54,8 +75,7 @@ async def add_timing_and_request_id(request: Request, call_next):  # type: ignor
         }))
         raise
     elapsed = int((time.perf_counter() - start) * 1000)
-    print(json.dumps({
-        "level": "info",
+    logging.getLogger("request").info(json.dumps({
         "request_id": str(rid),
         "path": request.url.path,
         "method": request.method,
@@ -66,7 +86,7 @@ async def add_timing_and_request_id(request: Request, call_next):  # type: ignor
 
 
 @app.get("/health")
-async def health():
+async def health() -> dict[str, str]:
     settings = get_settings()
     return {"status": "ok", "model": settings.model_name, "version": settings.app_version}
 
@@ -76,19 +96,19 @@ async def classify(
     payload: ClassifyRequest,
     db: Session = Depends(get_db),
     api_key_hash: str | None = Depends(verify_api_key),
-):
+) -> ClassifyResponse:
     try:
         resp = classify_and_persist(payload, db, api_key_hash)
         return resp
     except HTTPException:
         raise
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         # surface error for POC test visibility
         raise HTTPException(status_code=500, detail=f"inference failed: {e}") from e
 
 
 @app.get("/requests/{request_id}", response_model=RequestRecord)
-async def get_request(request_id: uuid.UUID, db: Session = Depends(get_db)):
+async def get_request(request_id: uuid.UUID, db: Session = Depends(get_db)) -> RequestRecord:
     req = db.get(InferenceRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="not found")

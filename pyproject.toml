@@ -42,8 +42,42 @@ where = ["src"]
 
 [tool.ruff]
 line-length = 100
-select = ["E", "F", "I", "B", "UP", "N", "ANN", "ASYNC", "S", "C4", "SIM", "PLC", "PLE", "PLR", "PLW"]
-ignore = ["S101", "ANN101", "ANN102"]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E", "F",
+    "I",
+    "B",
+    "UP",
+    "N",
+    "ANN",
+    "ASYNC",
+    "S",
+    "C4",
+    "SIM",
+    "PLC", "PLE", "PLR", "PLW",
+    "RUF",
+]
+ignore = [
+    "S101",
+    "ANN101", "ANN102",
+    "B008",
+    "PLR2004",
+]
+per-file-ignores = {"tests/*" = ["S101"]}
+
+[tool.ruff.lint.flake8-annotations]
+mypy-init-return = true
+allow-star-arg-any = false
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
 
 [tool.pytest.ini_options]
 addopts = "-q"

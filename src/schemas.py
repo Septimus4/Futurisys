@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import List
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 MAX_TEXT = 20_000
@@ -14,7 +14,7 @@ def _normalize_label(label: str) -> str:
 
 class ClassifyRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=MAX_TEXT)
-    candidate_labels: List[str] = Field(..., min_length=2, max_length=MAX_LABELS)
+    candidate_labels: list[str] = Field(..., min_length=2, max_length=MAX_LABELS)
     multi_label: bool = False
     hypothesis_template: str | None = Field(None, max_length=256)
 
@@ -44,7 +44,7 @@ class ClassifyRequest(BaseModel):
         return normed
 
     @model_validator(mode="after")
-    def set_default_template(self):  # type: ignore[override]
+    def set_default_template(self) -> ClassifyRequest:
         if not self.hypothesis_template:
             self.hypothesis_template = "This example is {}."
         return self
