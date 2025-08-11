@@ -1,0 +1,197 @@
+openapi: 3.1.0
+info:
+  title: Zero-Shot Classification API
+  version: 0.1.0
+  description: |
+    Zero-shot text classification API wrapping Hugging Face `facebook/bart-large-mnli`.
+    Provides endpoints for health check, classification, and request lookup.
+servers:
+  - url: http://localhost:8000
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: health
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, model, version]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  model:
+                    type: string
+                    example: facebook/bart-large-mnli
+                  version:
+                    type: string
+                    example: 0.1.0
+  /classify:
+    post:
+      summary: Zero-shot classify text into provided labels
+      operationId: classify
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassifyRequest'
+            examples:
+              single:
+                summary: Basic classification
+                value:
+                  text: I love writing Python and deploying models.
+                  candidate_labels: [technology, sports, finance]
+                  multi_label: false
+                  hypothesis_template: This text is about {}
+      responses:
+        '200':
+          description: Classification result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassifyResponse'
+              examples:
+                result:
+                  value:
+                    request_id: a3de9e96-9c3f-4a38-8a2e-3a1f0b8c0d2f
+                    labels: [technology, finance, sports]
+                    scores: [0.84, 0.12, 0.04]
+                    top_label: technology
+                    inference_ms: 132
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthorized (API key required / invalid)
+        '500':
+          description: Inference failed
+  /requests/{request_id}:
+    get:
+      summary: Retrieve stored request result or error
+      operationId: getRequest
+      parameters:
+        - name: request_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Request record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestRecord'
+        '404':
+          description: Not found
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  schemas:
+    ClassifyRequest:
+      type: object
+      required: [text, candidate_labels]
+      properties:
+        text:
+          type: string
+          maxLength: 20000
+        candidate_labels:
+          type: array
+          minItems: 2
+          maxItems: 50
+          items:
+            type: string
+        multi_label:
+          type: boolean
+          default: false
+        hypothesis_template:
+          type: string
+          maxLength: 256
+          default: This example is {}.
+    ClassifyResponse:
+      type: object
+      required: [request_id, labels, scores, top_label, inference_ms]
+      properties:
+        request_id:
+          type: string
+          format: uuid
+        labels:
+          type: array
+          items:
+            type: string
+        scores:
+          type: array
+          items:
+            type: number
+            format: float
+        top_label:
+          type: string
+        inference_ms:
+          type: integer
+    StoredRequest:
+      type: object
+      required: [id, text, candidate_labels, multi_label]
+      properties:
+        id:
+          type: string
+          format: uuid
+        text:
+          type: string
+        candidate_labels:
+          type: array
+          items: { type: string }
+        multi_label:
+          type: boolean
+        hypothesis_template:
+          type: string
+          nullable: true
+    StoredResult:
+      type: object
+      required: [request_id, labels, scores, top_label, inference_ms]
+      properties:
+        request_id:
+          type: string
+          format: uuid
+        labels:
+          type: array
+          items: { type: string }
+        scores:
+          type: array
+          items: { type: number }
+        top_label:
+          type: string
+        inference_ms:
+          type: integer
+    StoredError:
+      type: object
+      required: [request_id, error_type, message]
+      properties:
+        request_id:
+          type: string
+          format: uuid
+        error_type:
+          type: string
+        message:
+          type: string
+    RequestRecord:
+      type: object
+      required: [request]
+      properties:
+        request:
+          $ref: '#/components/schemas/StoredRequest'
+        result:
+          $ref: '#/components/schemas/StoredResult'
+        error:
+          $ref: '#/components/schemas/StoredError'
+security:
+  - {}
