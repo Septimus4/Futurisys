@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        cache-dependency-path: 'pyproject.toml'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .[dev]
+        
+        # Verify installation
+        echo "Package installed successfully:"
+        pip list | grep energy-prediction-api
+    
+    - name: Run ruff (linting)
+      run: ruff check src tests
+    
+    - name: Run ruff (formatting)
+      run: ruff format --check src tests
+    
+    - name: Verify model artifacts
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+      run: |
+        ls -la model/
+        python -c "
+        import joblib
+        import os
+        if os.path.exists('model/energy_rf.joblib'):
+            model = joblib.load('model/energy_rf.joblib')
+            print(f'Model loaded successfully: {type(model).__name__}')
+        else:
+            raise FileNotFoundError('Pre-trained model not found')
+        "
+    
+    - name: Run all tests with coverage
+      env:
+        DATABASE_URL: sqlite:///test.db
+        PYTHONPATH: ${{ github.workspace }}
+      run: |
+        pytest tests/ --cov=src --cov-report=term-missing --cov-report=xml --cov-fail-under=75 -v
+    
+    - name: Test demo script
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+      run: |
+        python -c "
+        from demo import EnergyAPIDemo
+        demo = EnergyAPIDemo()
+        print('Demo script imports successfully')
+        "
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      if: always()
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+        flags: unittests
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [lint-and-test]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build and test Docker image
+      run: |
+        # Build the image
+        docker build -t energy-prediction-api:latest .
+        
+        # Test basic imports work
+        docker run --rm -e DATABASE_URL=sqlite:///test.db energy-prediction-api:latest python -c "
+        import src.app
+        import src.runtime
+        print('Docker build successful - all imports work')
+        "
+        
+        # Test container can start and respond to health check
+        docker run -d --name test-api -p 8001:8000 \
+          -e DATABASE_URL=sqlite:///test.db \
+          energy-prediction-api:latest
+        
+        # Wait for startup
+        sleep 10
+        
+        # Test health endpoint
+        curl -f http://localhost:8001/health || (docker logs test-api && exit 1)
+        
+        # Cleanup
+        docker stop test-api
+        docker rm test-api

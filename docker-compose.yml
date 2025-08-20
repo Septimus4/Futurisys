@@ -1,0 +1,52 @@
+# Energy Prediction API Docker Compose
+# 
+# IMPORTANT: Configure environment variables before running!
+# 1. Copy environment template: cp .env.example .env
+# 2. Edit .env with your actual values (especially POSTGRES_PASSWORD)
+# 3. Run: docker-compose up --build
+#
+# See ENVIRONMENT.md for detailed configuration guide.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-energy_poc}
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-energy_poc}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      API_KEY: ${API_KEY:-}
+      DEBUG: ${DEBUG:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./model:/app/model:ro
+    command: ["uvicorn", "src.app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
