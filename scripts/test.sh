@@ -45,7 +45,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo -e "${BLUE}🧪 Running Energy Prediction API Tests${NC}"
+echo -e "${BLUE}Running Energy Prediction API Tests${NC}"
 echo "========================================"
 
 # Check if model exists
@@ -87,7 +87,7 @@ if [ "$FAST" = false ]; then
 fi
 
 # Demo script validation
-echo -e "${YELLOW}📋 Validating Demo Script${NC}"
+echo -e "${YELLOW}Validating Demo Script${NC}"
 echo "python -c 'from demo import EnergyAPIDemo; print(\"Demo imports successfully\")'"
 python -c "from demo import EnergyAPIDemo; print('Demo imports successfully')"
 

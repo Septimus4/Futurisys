@@ -25,8 +25,9 @@ COPY README.md ./
 # Copy source code for editable install
 COPY src/ ./src/
 
-# Install Python dependencies with pip
-RUN pip install -e .
+# Install Python dependencies with uv (faster and more reliable than pip)
+# First try uv sync, if that fails, fallback to pip
+RUN uv sync --frozen || pip install -e .
 
 # Copy application code
 COPY model/ ./model/

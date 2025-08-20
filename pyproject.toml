@@ -1,15 +1,11 @@
-[build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "energy-prediction-api"
 version = "0.1.0"
 description = "Energy Use Prediction API (FastAPI + PostgreSQL + scikit-learn)"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "UNLICENSED"}
-authors = [{name = "Unknown"}]
+license = {text = "MIT"}
+authors = [{name = "William Le Roux"}]
 dependencies = [
     "fastapi==0.110.2",
     "uvicorn[standard]==0.29.0",
