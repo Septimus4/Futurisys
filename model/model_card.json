@@ -1,0 +1,68 @@
+{
+  "model_name": "sklearn-random-forest",
+  "model_version": "20250819_rf_v1",
+  "artifact_path": "model/energy_rf.joblib",
+  "target_variable": "SourceEUIWN(kBtu/sf)",
+  "predicted_field": "predicted_source_eui_wn_kbtu_sf",
+  "algorithm": "RandomForestRegressor",
+  "preprocessing": {
+    "numeric_strategy": "median_imputation",
+    "categorical_strategy": "most_frequent_imputation + one_hot_encoding"
+  },
+  "feature_contract": {
+    "numeric": [
+      "ENERGYSTARScore",
+      "NumberofBuildings",
+      "NumberofFloors",
+      "PropertyGFATotal",
+      "YearBuilt"
+    ],
+    "categorical": [
+      "BuildingType",
+      "PrimaryPropertyType",
+      "LargestPropertyUseType",
+      "Neighborhood"
+    ]
+  },
+  "validation_rules": {
+    "ENERGYSTARScore": {
+      "min": 0,
+      "max": 100
+    },
+    "NumberofBuildings": {
+      "min": 1
+    },
+    "NumberofFloors": {
+      "min": 1
+    },
+    "PropertyGFATotal": {
+      "min": 1
+    },
+    "YearBuilt": {
+      "min": 1800,
+      "max": 2025
+    }
+  },
+  "performance_metrics": {
+    "mae": 49.02564857209841,
+    "mse": 25754.70015788484,
+    "rmse": 160.48270984091974,
+    "r2": 0.2080798972378335,
+    "train_samples": 2693,
+    "test_samples": 674,
+    "feature_names": [
+      "ENERGYSTARScore",
+      "NumberofBuildings",
+      "NumberofFloors",
+      "PropertyGFATotal",
+      "YearBuilt",
+      "BuildingType",
+      "PrimaryPropertyType",
+      "LargestPropertyUseType",
+      "Neighborhood"
+    ],
+    "target_name": "SourceEUIWN(kBtu/sf)"
+  },
+  "training_date": "2025-08-19T14:29:19.757284",
+  "sklearn_version": "1.4.2"
+}
