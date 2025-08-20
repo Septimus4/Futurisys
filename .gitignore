@@ -1,0 +1,70 @@
+# Python bytecode & caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+wheelhouse/
+
+# PyInstaller
+*.spec
+
+# Test & coverage
+.pytest_cache/
+.coverage*
+htmlcov/
+coverage.xml
+
+# Type checker / linters caches
+.mypy_cache/
+dmypy.json
+.dmypy.json
+.ruff_cache/
+
+# Logs
+*.log
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# IDE / Editor
+.vscode/
+.idea/
+*.iml
+
+# Jupyter / notebooks
+.ipynb_checkpoints/
+
+# Local data / artifacts
+test_unit.db
+
+# Cache directories (HF, pip)
+.cache/
+pip-wheel-metadata/
+hf_cache/
+
+# Docker
+*.tar
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+*.tmp
+*.swp
+*.swo
