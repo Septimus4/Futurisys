@@ -1,0 +1,578 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Energy Use Prediction API",
+        "description": "Predict building energy intensity using scikit-learn RandomForest",
+        "version": "0.1.0"
+    },
+    "paths": {
+        "/health": {
+            "get": {
+                "summary": "Health Check",
+                "description": "Health check endpoint with model metadata.",
+                "operationId": "health_check_health_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HealthResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/predict-energy-eui": {
+            "post": {
+                "summary": "Predict Energy Eui",
+                "description": "Predict energy use intensity for a single building.",
+                "operationId": "predict_energy_eui_predict_energy_eui_post",
+                "parameters": [
+                    {
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "X-Api-Key"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EnergyPredictionRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EnergyPredictionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/predict-energy-eui/batch": {
+            "post": {
+                "summary": "Predict Energy Eui Batch",
+                "description": "Predict energy use intensity for multiple buildings.",
+                "operationId": "predict_energy_eui_batch_predict_energy_eui_batch_post",
+                "parameters": [
+                    {
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "X-Api-Key"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BatchPredictionRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BatchPredictionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/requests/{request_id}": {
+            "get": {
+                "summary": "Get Request",
+                "description": "Look up a previous request by ID.",
+                "operationId": "get_request_requests__request_id__get",
+                "parameters": [
+                    {
+                        "name": "request_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "title": "Request Id"
+                        }
+                    },
+                    {
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "X-Api-Key"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RequestLookupResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "BatchPredictionRequest": {
+                "properties": {
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/EnergyPredictionRequest"
+                        },
+                        "type": "array",
+                        "maxItems": 512,
+                        "minItems": 1,
+                        "title": "Items",
+                        "description": "List of prediction requests (max 512)"
+                    }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                    "items"
+                ],
+                "title": "BatchPredictionRequest",
+                "description": "Schema for batch prediction request."
+            },
+            "BatchPredictionResponse": {
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Request Id",
+                        "description": "Unique identifier for this batch request"
+                    },
+                    "results": {
+                        "items": {
+                            "$ref": "#/components/schemas/BatchPredictionResult"
+                        },
+                        "type": "array",
+                        "title": "Results",
+                        "description": "List of prediction results"
+                    },
+                    "inference_ms": {
+                        "type": "integer",
+                        "title": "Inference Ms",
+                        "description": "Total time taken for batch inference in milliseconds"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "request_id",
+                    "results",
+                    "inference_ms"
+                ],
+                "title": "BatchPredictionResponse",
+                "description": "Schema for batch prediction response."
+            },
+            "BatchPredictionResult": {
+                "properties": {
+                    "index": {
+                        "type": "integer",
+                        "title": "Index",
+                        "description": "Index of the item in the batch"
+                    },
+                    "predicted_source_eui_wn_kbtu_sf": {
+                        "type": "number",
+                        "title": "Predicted Source Eui Wn Kbtu Sf",
+                        "description": "Predicted source energy use intensity in kBtu/sf"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "index",
+                    "predicted_source_eui_wn_kbtu_sf"
+                ],
+                "title": "BatchPredictionResult",
+                "description": "Schema for individual batch prediction result."
+            },
+            "EnergyPredictionRequest": {
+                "properties": {
+                    "ENERGYSTARScore": {
+                        "anyOf": [
+                            {
+                                "type": "number",
+                                "maximum": 100.0,
+                                "minimum": 0.0
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Energystarscore",
+                        "description": "ENERGY STAR score (0-100)"
+                    },
+                    "NumberofBuildings": {
+                        "type": "integer",
+                        "minimum": 1.0,
+                        "title": "Numberofbuildings",
+                        "description": "Number of buildings (\u22651)"
+                    },
+                    "NumberofFloors": {
+                        "type": "integer",
+                        "minimum": 1.0,
+                        "title": "Numberoffloors",
+                        "description": "Number of floors (\u22651)"
+                    },
+                    "PropertyGFATotal": {
+                        "type": "number",
+                        "exclusiveMinimum": 0.0,
+                        "title": "Propertygfatotal",
+                        "description": "Total gross floor area in square feet (>0)"
+                    },
+                    "YearBuilt": {
+                        "type": "integer",
+                        "maximum": 2025.0,
+                        "minimum": 1800.0,
+                        "title": "Yearbuilt",
+                        "description": "Year built (1800-2025)"
+                    },
+                    "BuildingType": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "minLength": 1,
+                        "title": "Buildingtype",
+                        "description": "Building type"
+                    },
+                    "PrimaryPropertyType": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "minLength": 1,
+                        "title": "Primarypropertytype",
+                        "description": "Primary property type"
+                    },
+                    "LargestPropertyUseType": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "minLength": 1,
+                        "title": "Largestpropertyusetype",
+                        "description": "Largest property use type"
+                    },
+                    "Neighborhood": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "minLength": 1,
+                        "title": "Neighborhood",
+                        "description": "Neighborhood"
+                    }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                    "NumberofBuildings",
+                    "NumberofFloors",
+                    "PropertyGFATotal",
+                    "YearBuilt",
+                    "BuildingType",
+                    "PrimaryPropertyType",
+                    "LargestPropertyUseType",
+                    "Neighborhood"
+                ],
+                "title": "EnergyPredictionRequest",
+                "description": "Schema for energy prediction request."
+            },
+            "EnergyPredictionResponse": {
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Request Id",
+                        "description": "Unique identifier for this request"
+                    },
+                    "predicted_source_eui_wn_kbtu_sf": {
+                        "type": "number",
+                        "title": "Predicted Source Eui Wn Kbtu Sf",
+                        "description": "Predicted source energy use intensity in kBtu/sf"
+                    },
+                    "model_name": {
+                        "type": "string",
+                        "title": "Model Name",
+                        "description": "Model name used for prediction"
+                    },
+                    "model_version": {
+                        "type": "string",
+                        "title": "Model Version",
+                        "description": "Model version used for prediction"
+                    },
+                    "inference_ms": {
+                        "type": "integer",
+                        "title": "Inference Ms",
+                        "description": "Time taken for inference in milliseconds"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "request_id",
+                    "predicted_source_eui_wn_kbtu_sf",
+                    "model_name",
+                    "model_version",
+                    "inference_ms"
+                ],
+                "title": "EnergyPredictionResponse",
+                "description": "Schema for energy prediction response."
+            },
+            "ErrorResponse": {
+                "properties": {
+                    "error": {
+                        "type": "string",
+                        "title": "Error",
+                        "description": "Error type"
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "description": "Error message"
+                    },
+                    "request_id": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Request Id",
+                        "description": "Request ID if available"
+                    },
+                    "details": {
+                        "anyOf": [
+                            {
+                                "type": "object"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Details",
+                        "description": "Additional error details"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "error",
+                    "message"
+                ],
+                "title": "ErrorResponse",
+                "description": "Schema for error responses."
+            },
+            "HTTPValidationError": {
+                "properties": {
+                    "detail": {
+                        "items": {
+                            "$ref": "#/components/schemas/ValidationError"
+                        },
+                        "type": "array",
+                        "title": "Detail"
+                    }
+                },
+                "type": "object",
+                "title": "HTTPValidationError"
+            },
+            "HealthResponse": {
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "title": "Status",
+                        "description": "Health status",
+                        "default": "ok"
+                    },
+                    "model": {
+                        "type": "string",
+                        "title": "Model",
+                        "description": "Model type identifier"
+                    },
+                    "artifact": {
+                        "type": "string",
+                        "title": "Artifact",
+                        "description": "Path to model artifact"
+                    },
+                    "version": {
+                        "type": "string",
+                        "title": "Version",
+                        "description": "Model version"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "model",
+                    "artifact",
+                    "version"
+                ],
+                "title": "HealthResponse",
+                "description": "Schema for health check response."
+            },
+            "RequestLookupResponse": {
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Request Id",
+                        "description": "Request identifier"
+                    },
+                    "received_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "title": "Received At",
+                        "description": "When the request was received"
+                    },
+                    "features": {
+                        "type": "object",
+                        "title": "Features",
+                        "description": "Original request features"
+                    },
+                    "result": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/EnergyPredictionResponse"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "Prediction result if successful"
+                    },
+                    "error": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/ErrorResponse"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "Error details if failed"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "request_id",
+                    "received_at",
+                    "features"
+                ],
+                "title": "RequestLookupResponse",
+                "description": "Schema for request lookup response."
+            },
+            "ValidationError": {
+                "properties": {
+                    "loc": {
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        },
+                        "type": "array",
+                        "title": "Location"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "title": "Message"
+                    },
+                    "type": {
+                        "type": "string",
+                        "title": "Error Type"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "loc",
+                    "msg",
+                    "type"
+                ],
+                "title": "ValidationError"
+            }
+        }
+    }
+}
