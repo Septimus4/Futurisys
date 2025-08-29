@@ -10,7 +10,8 @@ from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .deps import ApiKeyMasked, DatabaseSession, create_tables
+from . import deps
+from .deps import ApiKeyMasked, DatabaseSession
 from .runtime import model_runtime
 from .schemas import (
     BatchPredictionRequest,
@@ -53,8 +54,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Starting Energy Prediction API", version=settings.model_version)
 
     try:
-        # Create database tables
-        create_tables()
+        # Create database tables (via module reference so tests can monkeypatch)
+        deps.create_tables()
         logger.info("Database tables created/verified")
 
         # Load model artifacts
@@ -152,7 +153,7 @@ async def logging_middleware(request: Request, call_next: Callable[[Request], Aw
 
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content=error_response.model_dump(),
+            content=error_response.model_dump(mode="json"),
             headers={"X-Request-ID": request_id},
         )
 

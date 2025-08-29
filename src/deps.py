@@ -8,11 +8,23 @@ from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from .db_utils import normalize_db_url
 from .models import Base
 from .settings import settings
 
-# Database setup
-engine = create_engine(settings.database_url, pool_pre_ping=True, pool_recycle=300, echo=settings.debug)
+db_url = normalize_db_url(settings.database_url)
+
+engine_kwargs: dict[str, object] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 300,
+    "echo": settings.debug,
+}
+
+# If using SQLite, configure thread safety for Uvicorn workers
+if db_url.startswith("sqlite://"):
+    engine = create_engine(db_url, connect_args={"check_same_thread": False}, **engine_kwargs)
+else:
+    engine = create_engine(db_url, **engine_kwargs)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

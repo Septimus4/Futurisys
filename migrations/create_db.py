@@ -18,12 +18,21 @@ sys.path.insert(0, str(app_dir / "src"))
 
 from src.models import Base
 from src.settings import settings
+from src.db_utils import normalize_db_url
+
+
+def _normalize_db_url(url: str) -> str:
+    """Backwards-compat shim to avoid breaking external imports.
+
+    Prefer using src.db_utils.normalize_db_url directly.
+    """
+    return normalize_db_url(url)
 
 
 def create_database_if_not_exists() -> None:
     """Create the database if it doesn't exist."""
     # Parse the database URL to get connection details
-    parsed_url = urlparse(settings.database_url)
+    parsed_url = urlparse(normalize_db_url(settings.database_url))
     db_name = parsed_url.path[1:]  # Remove leading '/'
     
     # Create connection URL without database name for initial connection
@@ -61,11 +70,11 @@ def create_database_if_not_exists() -> None:
 
 def create_tables() -> None:
     """Create all tables in the database."""
-    print(f"Connecting to database: {settings.database_url}")
+    print(f"Connecting to database: {normalize_db_url(settings.database_url)}")
 
     try:
         # Create engine for the target database
-        engine = create_engine(settings.database_url, echo=True)
+    engine = create_engine(normalize_db_url(settings.database_url), echo=True)
 
         # Test connection
         with engine.connect() as conn:
